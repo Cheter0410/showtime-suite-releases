@@ -60,7 +60,7 @@
       "tagline": "Presentation playback for live shows: PowerPoint, GO or timecode, display and NDI.",
       "color": "#ffc45c",
       "releases": "Cheter0410/lantern-releases",
-      "icon_url": "https://raw.githubusercontent.com/Cheter0410/stagehand-releases/main/icons/lantern.png",
+      "icon_url": "https://raw.githubusercontent.com/Cheter0410/showtime-suite-releases/main/icons/lantern.png",
       "macos": {
         "asset_suffix": ".dmg",
         "app": "Lantern.app"

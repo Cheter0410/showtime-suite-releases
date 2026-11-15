@@ -1,13 +1,13 @@
 #!/bin/sh
-# Installs Stagehand and the show apps from a USB stick, without internet.
+# Installs Showtime Suite and the show apps from a USB stick, without internet.
 #
 # Put this file on the stick next to the downloaded Linux files
 # (*-linux-x86_64.tar.gz and/or showmaster-*.pkg.tar.zst), then run:
 #
 #   sh /run/media/$USER/<stick>/usb-install.sh
 #
-# Everything lands where Stagehand itself installs apps
-# (~/.local/share/stagehand/apps), so Stagehand sees them as installed and
+# Everything lands where Showtime Suite itself installs apps
+# (~/.local/share/showtime-suite/apps), so Showtime Suite sees them as installed and
 # can update or remove them later.
 set -eu
 
@@ -18,9 +18,26 @@ if [ "$(id -u)" = 0 ]; then
 fi
 
 HERE=$(cd "$(dirname "$0")" && pwd)
-APPS="${XDG_DATA_HOME:-$HOME/.local/share}/stagehand/apps"
+APPS="${XDG_DATA_HOME:-$HOME/.local/share}/showtime-suite/apps"
 BIN="$HOME/.local/bin"
 MENU="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+# Until Stagehand 0.1 (before the rename to Showtime Suite) the folder was
+# called stagehand: move it over once, with the menu entries and commands.
+OLD_APPS="${XDG_DATA_HOME:-$HOME/.local/share}/stagehand/apps"
+if [ -d "$OLD_APPS" ] && [ ! -e "$APPS" ]; then
+  mkdir -p "$(dirname "$APPS")"
+  mv "$OLD_APPS" "$APPS"
+  rmdir "$(dirname "$OLD_APPS")" 2>/dev/null || true
+  for f in "$MENU"/*.desktop; do
+    grep -qs '^X-Stagehand=1' "$f" || continue
+    sed -e "s|$OLD_APPS/|$APPS/|g" -e 's|^X-Stagehand=1|X-Showtime-Suite=1|' "$f" >"$f.new" && mv "$f.new" "$f"
+  done
+  for f in "$BIN"/*; do
+    [ -L "$f" ] || continue
+    t=$(readlink "$f")
+    case "$t" in "$OLD_APPS"/*) ln -sfn "$APPS/${t#"$OLD_APPS"/}" "$f" ;; esac
+  done
+fi
 mkdir -p "$APPS" "$BIN" "$MENU"
 found=0
 failed=""
@@ -32,10 +49,10 @@ if [ -n "$pkg" ]; then
     echo "==> Show Master (Arch-Paket) – sudo fragt nach deinem Passwort"
     if sudo pacman -U --noconfirm "$pkg"; then
       found=1
-      # One copy only: an older one in the Stagehand folder would be the one the menu starts.
+      # One copy only: an older one in the Showtime Suite folder would be the one the menu starts.
       if [ -d "$APPS/showmaster" ]; then
         rm -rf "$APPS/showmaster"
-        if grep -qs '^X-Stagehand=1' "$MENU/showmaster.desktop"; then rm -f "$MENU/showmaster.desktop"; fi
+        if grep -qsE '^X-(Showtime-Suite|Stagehand)=1' "$MENU/showmaster.desktop"; then rm -f "$MENU/showmaster.desktop"; fi
         case "$(readlink "$BIN/showmaster" 2>/dev/null || true)" in "$APPS"/*) rm -f "$BIN/showmaster" ;; esac
       fi
     else
@@ -50,9 +67,9 @@ fi
 
 for tar in "$HERE"/*-linux-x86_64.tar.gz; do
   [ -f "$tar" ] || continue
-  base=$(basename "$tar" -linux-x86_64.tar.gz)   # e.g. lantern-0.1.0
-  id=${base%%-*}                                   # lantern
-  version=${base#*-}                               # 0.1.0
+  base=$(basename "$tar" -linux-x86_64.tar.gz)   # e.g. showtime-suite-0.2.0
+  id=${base%-*}                                    # showtime-suite
+  version=${base##*-}                              # 0.2.0
   # The Arch package already installed Show Master.
   if [ "$id" = showmaster ] && command -v pacman >/dev/null 2>&1 && pacman -Q showmaster >/dev/null 2>&1; then
     echo "==> showmaster: per pacman installiert, Archiv übersprungen"
@@ -88,16 +105,16 @@ for tar in "$HERE"/*-linux-x86_64.tar.gz; do
   if [ -f "$src" ]; then
     args=$(sed -n 's/^Exec=[^ ]*//p' "$src" | head -n 1)
     {
-      grep -vE '^(Exec|Icon|X-Stagehand)=' "$src"
+      grep -vE '^(Exec|Icon|X-Showtime-Suite|X-Stagehand)=' "$src"
       printf 'Exec="%s"%s\n' "$APPS/$id/$id" "$args"
       [ -n "$icon" ] && echo "$icon"
-      echo "X-Stagehand=1"
+      echo "X-Showtime-Suite=1"
     } > "$MENU/$id.desktop"
   else
     {
       printf '[Desktop Entry]\nType=Application\nName=%s\nExec="%s" %%F\n' "$id" "$APPS/$id/$id"
       [ -n "$icon" ] && echo "$icon"
-      printf 'Terminal=false\nCategories=AudioVideo;\nX-Stagehand=1\n'
+      printf 'Terminal=false\nCategories=AudioVideo;\nX-Showtime-Suite=1\n'
     } > "$MENU/$id.desktop"
   fi
 done
@@ -109,7 +126,7 @@ if [ "$found" != 1 ]; then
   exit 1
 fi
 
-# ~/.local/bin on the PATH, so "stagehand" works in the terminal.
+# ~/.local/bin on the PATH, so "showtime-suite" works in the terminal.
 case ":$PATH:" in
   *":$BIN:"*) ;;
   *)
@@ -124,7 +141,7 @@ esac
 echo
 if [ -n "$failed" ]; then
   echo "Nicht installiert: $failed"
-  echo "Der Rest ist fertig. Stagehand findest du im Startmenü."
+  echo "Der Rest ist fertig. Showtime Suite findest du im Startmenü."
   exit 1
 fi
-echo "Fertig. Stagehand findest du jetzt im Startmenü."
+echo "Fertig. Showtime Suite findest du jetzt im Startmenü."
