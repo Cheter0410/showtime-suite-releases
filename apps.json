@@ -51,7 +51,9 @@
       "dev": {
         "repo": "Cheter0410/beamweave",
         "folder": "beamweave",
-        "release": "scripts/release.sh"
+        "release": "./release.sh",
+        "install_macos": "bash install-mac.sh",
+        "install_linux": "./install.sh"
       }
     },
     {
